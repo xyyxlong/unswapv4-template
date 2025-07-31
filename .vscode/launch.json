@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Hardhat Tests",
+            "type": "node", // 必须为 "node" 而非 "hardhat-node"
+            "request": "launch",
+            "runtimeExecutable": "npx", // 关键修复：通过 npx 调用 Hardhat
+            "runtimeArgs": [
+                "hardhat",
+                "test",
+                "--no-compile",
+                "${file}" // 指定当前打开的测试文件
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": ["<node_internals>/**"],
+            "cwd": "${workspaceFolder}" // 确保工作目录正确
+        }
+    ]
+}
