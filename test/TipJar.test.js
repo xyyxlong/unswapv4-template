@@ -1,6 +1,14 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect } = require("chai"); // 添加此行
 const { ethers } = require("hardhat");
+const fs = require('fs');
+//可以在命令行执行：npx hardhat test test/TipJar.test.js
+// 也可以在 package.json 中添加脚本：
+// "scripts": {
+//   "test": "hardhat test"
+// }  
+// 然后执行：npm run test
+// 也可以在 VSCode 中安装 Hardhat 插件，直接运行测试文件·
 
 describe("TipJar Contract", function () {
   // 部署合约的Fixture函数（复用部署逻辑）
@@ -8,6 +16,9 @@ describe("TipJar Contract", function () {
     const [owner, tipper, attacker] = await ethers.getSigners();
     const TipJar = await ethers.getContractFactory("TipJar");
     const tipJar = await TipJar.deploy();
+    // 记录结果到文件
+    const logEntry = `TipJar Log at ${new Date().toISOString()}: Success\n`;
+    fs.appendFileSync('custom-test.log', logEntry);
     return { tipJar, owner, tipper, attacker };
   }
 
@@ -32,6 +43,14 @@ describe("TipJar Contract", function () {
         tipJar.connect(tipper).tip({ value: tipAmount })
       ).to.changeEtherBalance(tipJar, tipAmount); // 验证合约余额增加
     });
+
+    it("getBalance() returns balance for owner", async function () {
+      const { tipJar } = await loadFixture(deployTipJarFixture);
+      let tipAmount = ethers.parseEther("0.5");
+      await tipJar.tip({ value: tipAmount });
+      expect(await tipJar.getBalance()).to.equal(tipAmount);
+    });
+
 
     it("Should revert if tip is zero", async function () {
       const { tipJar, tipper } = await loadFixture(deployTipJarFixture);
@@ -70,6 +89,9 @@ describe("TipJar Contract", function () {
 
     it("Should revert if non-owner tries to withdraw", async function () {
       const { tipJar, attacker } = await loadFixture(deployTipJarFixture);
+      console.log("Attacker address:", attacker.address);
+      // 尝试非拥有者提现
+      // 这将触发错误，因为只有合约拥有者可以提现
       await expect(
         tipJar.connect(attacker).withdraw()
       ).to.be.revertedWith("TipJar: Only owner can withdraw");
@@ -77,23 +99,19 @@ describe("TipJar Contract", function () {
 
     it("Should revert if balance is zero", async function () {
       const { tipJar, owner } = await loadFixture(deployTipJarFixture);
+      // 尝试提现时合约余额为零
       await expect(
         tipJar.connect(owner).withdraw()
       ).to.be.revertedWith("TipJar: No balance to withdraw");
     });
   });
 
-  describe("get Functions", function () {
-    it("getBalance() returns balance for owner", async function () {
-      const { tipJar } = await loadFixture(deployTipJarFixture);
-      expect(await tipJar.getBalance()).to.equal(0);
-    });
-  });
+
 
   describe("View Functions", function () {
     it("isOwner() returns true for owner", async function () {
       const { tipJar, owner } = await loadFixture(deployTipJarFixture);
-      expect(await tipJar.isOwner()).to.be.true;
+      expect(await tipJar.connect(owner).isOwner()).to.be.true;
     });
 
     it("isOwner() returns false for non-owner", async function () {
